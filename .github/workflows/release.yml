@@ -1,59 +1,29 @@
-name: Build and Release
+# .github/workflows/release.yml
 
 on:
-  push:
-    tags:
-      - "*"
+  release:
+    types: [created]
 
 jobs:
-  build:
-    name: Build Binaries
-    runs-on: ${{ matrix.os }}
+  release:
+    name: release ${{ matrix.target }}
+    runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            artifact: moonshine-linux
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            artifact: moonshine-windows.exe
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            artifact: moonshine-macos
-
+          - target: x86_64-pc-windows-gnu
+            archive: zip
+          - target: x86_64-unknown-linux-musl
+            archive: tar.gz tar.xz tar.zst
+          - target: x86_64-apple-darwin
+            archive: zip
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-
-      - name: Install Rust Target
-        run: rustup target add ${{ matrix.target }}
-
-      - name: Build Binary
-        run: cargo build --release --target ${{ matrix.target }}
-
-      - name: Rename Binary
-        run: mv target/${{ matrix.target }}/release/moonshine ${{ matrix.artifact }} || mv target/${{ matrix.target }}/release/moonshine.exe ${{ matrix.artifact }}
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ matrix.artifact }}
-          path: ${{ matrix.artifact }}
-
-  release:
-    name: Create GitHub Release
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download Artifacts
-        uses: actions/download-artifact@v3
-        with:
-          path: artifacts
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: artifacts/*
+      - uses: actions/checkout@master
+      - name: Compile and release
+        uses: rust-build/rust-build.action@v1.4.5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          RUSTTARGET: ${{ matrix.target }}
+          ARCHIVE_TYPES: ${{ matrix.archive }}
