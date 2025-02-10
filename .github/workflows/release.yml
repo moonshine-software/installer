@@ -1,3 +1,5 @@
+# .github/workflows/release.yml
+
 on:
   release:
     types: [created]
@@ -5,53 +7,23 @@ on:
 jobs:
   release:
     name: release ${{ matrix.target }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
           - target: x86_64-pc-windows-gnu
-            runs-on: ubuntu-latest
             archive: zip
-            use_rust_build: true
           - target: x86_64-unknown-linux-musl
-            runs-on: ubuntu-latest
             archive: tar.gz tar.xz tar.zst
-            use_rust_build: true
           - target: x86_64-apple-darwin
-            runs-on: macos-latest
             archive: zip
-            use_rust_build: false
-          - target: aarch64-apple-darwin
-            runs-on: macos-latest
-            archive: zip
-            use_rust_build: false
-    runs-on: ${{ matrix.runs-on }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install Rust target
-        run: rustup target add ${{ matrix.target }}
-
-      - name: Compile using rust-build
-        if: matrix.use_rust_build == true
+      - name: Compile and release
         uses: rust-build/rust-build.action@v1.4.5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           RUSTTARGET: ${{ matrix.target }}
           ARCHIVE_TYPES: ${{ matrix.archive }}
-
-      - name: Compile manually for macOS
-        if: matrix.use_rust_build == false
-        run: cargo build --release --target ${{ matrix.target }}
-
-      - name: Rename Binary (macOS)
-        if: matrix.use_rust_build == false
-        run: mv target/${{ matrix.target }}/release/moonshine installer_${{ matrix.target }}
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Binary-${{ matrix.target }}
-          path: |
-            target/${{ matrix.target }}/release/moonshine
