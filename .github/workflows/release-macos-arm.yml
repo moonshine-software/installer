@@ -1,0 +1,35 @@
+name: Build macOS (Apple Silicon)
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  release-macos-arm:
+    name: Build macOS (Apple Silicon)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust target for Apple Silicon
+        run: rustup target add aarch64-apple-darwin
+
+      - name: Build macOS ARM64 binary
+        run: cargo build --release --target aarch64-apple-darwin
+
+      - name: Rename Binary
+        run: mv target/aarch64-apple-darwin/release/moonshine-installer installer_aarch64-apple-darwin
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer_aarch64-apple-darwin
+          path: installer_aarch64-apple-darwin
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: installer_aarch64-apple-darwin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
